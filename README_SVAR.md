@@ -27,7 +27,7 @@ Hvis en annen skulle klare å utnytte en sårbarhet i applikasjonen, får de da 
 ## Oppgave 1B
 
 **Workflow:** `.github/workflows/ci.yml`
-**Grønn kjøring:** TBD
+**Grønn kjøring:** https://github.com/martinmyrvoll/pgr301-exam/actions/runs/42036946540
 
 Workflowen kjører kun ved push til `main`. Den bygger Docker-imaget og pusher det til ECR repoet som jeg laget,
 `wishifai-17`. AWS-nøklene ligger inne i Github under actions secrets. 
