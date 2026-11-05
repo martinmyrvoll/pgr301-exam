@@ -23,3 +23,24 @@ Hvis en annen skulle klare å utnytte en sårbarhet i applikasjonen, får de da 
 
 **Hemmeligheter:** AWS-nøkler bygges ikke inn i imaget, men sendes inn som miljøvariabler ved oppstart via
 `--env-file`. `.env` ligger i `.gitignore`, og `.env.example` viser hvilke variabler som må brukes.
+
+## Oppgave 1B
+
+**Workflow:** `.github/workflows/ci.yml`
+**Grønn kjøring:** TBD
+
+Workflowen kjører kun ved push til `main`. Den bygger Docker-imaget og pusher det til ECR repoet som jeg laget,
+`wishifai-17`. AWS-nøklene ligger inne i Github under actions secrets. 
+
+### Tagging-strategi
+Hvert image får to tagger: den korte commit-SHA-en f. eks. `a1b2c3d` og `latest`.
+
+**Commit-SHA:** Kobler hver image til nøyaktig én commit. Da kan man alltid se hvilken kode som kjører i ECS og finne
+igjen commiten hvis noe skulle skjære seg. SHA-en er unik, så et gammelt image vil aldri bli overskrevet.
+Rollback gjøres ved å deploye en eldre tag som virket.
+
+**`latest`:** Bare for å gjøre det enkelt å hente nyeste versjon lokalt. Den brukes ikke til deploy, fordi den endrer
+seg hele tiden og ikke sier noe om hvilken versjon det er.
+
+Jeg valgte SHA fremfor klassisk verjsonering (f. eks. `1.0.2`), fordi det ikke krever noe manuelt arbeid.
+Hver push til `main` får automatisk en unik og sporbar tag.
