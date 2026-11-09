@@ -44,3 +44,33 @@ seg hele tiden og ikke sier noe om hvilken versjon det er.
 
 Jeg valgte SHA fremfor klassisk verjsonering (f. eks. `1.0.2`), fordi det ikke krever noe manuelt arbeid.
 Hver push til `main` får automatisk en unik og sporbar tag.
+
+## Oppgave 2A
+
+**URL:** https://wi-9565fee3b16a4b0dad130d667ca89d48.ecs.eu-west-1.on.aws
+
+Test `curl -F "image=@samples/sample_image.png" <URL>/api/analyze`
+
+Terraform-koden ligger under `infra/` og oppretter:
+ - S3-bucket `wishifai-17-images` for bilder
+ - Task role `wishifai-task-role-17` med tilgang til S3, Rekognition, Bedrock og CloudWatch
+ - ECS Express-tjeneste som bruker de eksisterende execution of infrastructure rollene
+
+`S3_BUCKET` settes automatisk fra bucket-resourcen, så appen og Terraform bruker alltid samme bucket.
+Region, kandidatnr og image tag er variabler
+
+## Oppgave 2B
+
+State lagres i bucketet `pgr301-terraform-state` med nøkkelen `wishifai/17/terraform.tfstate`.
+Kandidatnummeret i nøkkelen er unikt og gjør at ingen andre overskriver min state.
+`use_lockfile` gjør slik at to kjøringer ikke kan endre state samtidig.
+
+## Oppgave 2C
+
+**Grønn kjøring:** TBD
+
+Terraform-jobben har `needs: build`, så den kjører først når imaget er bygget og pushet til ECR.
+Ellers kunne Terraform prøve å deploye en image-tag som ikke finnes enda og deployen ville feilet.
+Hvis builden feiler, blir ingenting deployet. Image-taggen sendes fra build-jobben til Terraform,
+så det som deployes er nøyaktig den koden som nettopp ble bygget.
+Pipelinen feiler hvis koden ikke er formatert (`terraform fmt -check`).
