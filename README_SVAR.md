@@ -67,10 +67,35 @@ Kandidatnummeret i nøkkelen er unikt og gjør at ingen andre overskriver min st
 
 ## Oppgave 2C
 
-**Grønn kjøring:** TBD
+**Grønn kjøring:** https://github.com/martinmyrvoll/pgr301-exam/actions/runs/42616436243
 
 Terraform-jobben har `needs: build`, så den kjører først når imaget er bygget og pushet til ECR.
 Ellers kunne Terraform prøve å deploye en image-tag som ikke finnes enda og deployen ville feilet.
 Hvis builden feiler, blir ingenting deployet. Image-taggen sendes fra build-jobben til Terraform,
 så det som deployes er nøyaktig den koden som nettopp ble bygget.
 Pipelinen feiler hvis koden ikke er formatert (`terraform fmt -check`).
+
+## Oppgave 3A
+
+Jeg la til Micrometer, og dataen blir sendt til CloudWatch under namespace `wishifai-17`.
+
+| Metrikk | Type | Hvor |
+|---|---|---|
+| `wishifai.rekognition.latency` | Timer | `RekognitionService` |
+| `wishifai.bedrock.latency` | Timer | `BedrockService` |
+| `wishifai.gifts.suggested` | Counter | `WishlistService` |
+
+**Timere for Rekognition og Bedrock:** Grunderen lurte på hva som tar så lang tid. Med en timer rundt hvert kall
+kan jeg se hva som tar tid.
+
+Resultat fra tester (snitt av 3):
+- Rekognition: ca. 1,2 sekunder.
+- Bedrock: ca. 14,2 sekunder.
+
+Bedrock står altså for rundt 90% av responstiden. Prompten ber modellen tenke gjennom flere steg og skrive
+en begrunnelse for hvert gaveforslag, noe som skaper mange output tokens og lang svartid. Hvis tjenesten
+skal bli raskere, er det prompten og modellvalget som bør endres, ikke Rekognition eller S3.
+
+**Business-metrikk - antall gaveforslag (`wishifai.gifts.suggested`):** Teller hvor mange gaveforslag tjenesten
+har generert. Den sier noe om faktisk bruk av tjenesten, ikke bare om den er oppe. Hvis den flater ut, 
+bruker ingen tjenesten, eller Bedrock returnerer tomme lister selv om alt ser bra ut.
