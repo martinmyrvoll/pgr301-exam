@@ -99,3 +99,43 @@ skal bli raskere, er det prompten og modellvalget som bør endres, ikke Rekognit
 **Business-metrikk - antall gaveforslag (`wishifai.gifts.suggested`):** Teller hvor mange gaveforslag tjenesten
 har generert. Den sier noe om faktisk bruk av tjenesten, ikke bare om den er oppe. Hvis den flater ut, 
 bruker ingen tjenesten, eller Bedrock returnerer tomme lister selv om alt ser bra ut.
+
+## Oppgave 3B
+
+**Grønn kjøring:**: https://github.com/martinmyrvoll/pgr301-exam/actions/runs/42816355908
+
+**Dashboard:** `wishifai-17` (CloudWatch, eu-west-1). Koden ligger i `infra/monitoring.tf`.
+
+![Dashboard](media/dashboard.png)
+
+Dataen i skjermbildet kommer fra 5 testkall mot ECS-tjenesten sendt med en curl-loop.
+
+```bash
+URL=https://wi-9565fee3b16a4b0dad130d667ca89d48.ecs.eu-west-1.on.aws
+for i in 1 2 3 4 5; do curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" \
+-F "image=@samples/sample_image.png" $URL/api/analyze; done
+```
+
+### Metrikker i dashboardet
+| Widget | Type | Hvorfor |
+|---|---|---|
+| Antall gaveforslag | Business | Viser faktisk bruk av tjenesten |
+| Bedrock vs Rekognition latency | Egne metrikker | Viser hvor tiden blir av i hvert kall |
+| ECS CPU og minne | Infrastruktur | Viser om containeren har nok ressurser eller må skaleres |
+| HTTP-responstid for `/api/analyze` | Applikasjon (Actuator) | Total tid brukeren venter, inkludert S3 og egen kode |
+
+Ved å se Bedrock-latency og HTTP-responstid ved siden av hverandre ser man at nesten hele responstiden kommer fra
+Bedrock. CPU og minne er lave, så tregheten skyldes ikke for lite ressurser i containeren.
+
+
+### Alarm
+`wishifai-17-bedrock-latency-high` går av hvis gjennomsnittlig svartid fra Bedrock er over
+25 sekunder i to perioder på 5 minutter på rad.
+
+- **Hvorfor Bedrock:** Det er den tregeste delen av tjenesten, og den vi har minst kontroll over (modellen svartid
+    og last hos AWS).
+- **Tersekl 25 sek:** Godt over normalen på ca. 14 sekunder, så vanlig variasjon ikke utløser alarmen,
+    men en ekte forverring blir fanget opp.
+- **2 x 5 minutter:** Én treg forespørsel gir ikke alarm, bare varende treghet.
+- **`treat_missing_data = notBreaching`:** Ingen trafikk betyr ingen data, og det er ikke en feil.
+
