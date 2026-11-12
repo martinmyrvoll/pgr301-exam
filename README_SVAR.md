@@ -139,3 +139,43 @@ Bedrock. CPU og minne er lave, så tregheten skyldes ikke for lite ressurser i c
 - **2 x 5 minutter:** Én treg forespørsel gir ikke alarm, bare varende treghet.
 - **`treat_missing_data = notBreaching`:** Ingen trafikk betyr ingen data, og det er ikke en feil.
 
+## Oppgave 4
+
+I en mer tradisjonell software som ikke liter på svar fra LLM prompts betyr en grønn pipeline at tjenesten fungerer.
+Med AI holder det ikke lenger, i applikasjonen så foreslår den produkter som kanskje ikke finnes som f. eks. 
+en av de første testene mine forslår den "Aspire Collection Venezia Hurricane lysestake". Likevel returnerer applikasjonen
+`200 OK`. Teknisk sett fungerer alt og brukeren har fått et svar, uten at applikasjonen kan vite om det stemmer.
+
+### Testing
+Siden samme input kan gi ulikt output med AI-modellen, gir klassiske `assertEquals` på teksten ingen mening. I stedet
+kan man teste egenskaper ved svaret. Er det gyldig JSON? Er det maks fem forslag? Her ville det også vært smart med en
+blacklist for forslag, f. eks. våpen, alkohol eller upassende ord.
+Likevel vil disse testene bare gi oss godkjenning om at svaret har riktig form og at innholdet ikke er blacklisted.
+Derfor trenger man et eval-set, en fast samling av testbilder med gode og dårlige svar som kjøres hver gang modellen 
+eller prompten endres. Dette vil gi en score som viser om svarene blir dårligere etter en endring. Det å sitte og vurdere
+hundrevis av svar manuelt vil være tidkrevende, her er det mulig å la en annen AI vurdere disse ("LLM-as-judge"). 
+Dette gjør det mye mer effektivt, men at byttehandelen blir at vi stoler på en annen modell. Her foreslår jeg at man bør
+ta stikkprøver manuelt. I pipelinen ville jeg ha kjørt de enkle testene av svarformatet på hver push, siden de er 
+relativt raske og billige.
+
+### Kontinuerlig leveranse
+I Wishifai ligger prompten hardkodet i `BedrockService` og modell-ID-en i `application.properties`. Dette blir
+versjonert i Git sammen med koden. Ulempen er at en liten endring i prompten krever et nytt build og deploy, og prompten
+kan ikke rulles tilbake uten å rulle tilbake koden også. Modell-ID-en kan overstyres med BEDROCK_MODEL_ID, men burde
+settes fra en Terraform-Variabel, og prompten kan ligge som en ekstern konfigurasjon (AWS AppConfig). Ny prompt eller
+modell bør også testes på en liten andel brukere som en canary test før alle får den.
+
+### Overvåking
+Alarmen jeg laget varsler hvis Bedrock blir treg, men ville aldri oppdaget et farlig eller oppdiktet forslag.
+Også business-metrikken `gifts.suggested`, øker like mye om forslagene er gode eller dårlige. Jeg ville lagt til en 
+"rapporter forslag"-knapp som telles som en metrikk, med en alarm som går av når andelen rapporterte forslag blir for høy.
+
+### Risiko
+Hvor strenge disse praksisene må være, avhenger av hva som skjer når AI-en tar feil. Et dårlig gaveforslag er irriterende,
+men et feil råd fra medisinsk AI-bot kan koste brukeren mye. I vårt Wishifai tilfelle vil det kunne være akseptabelt å
+finne feil i prod, mens i situasjoner med høyere risiko, bør et menneske godkjenne endringer i prompt og modell før prod,
+og AI-en bare foreslå mens fagpersonen bestemmer. 
+
+### Konklusjon
+Generativ AI endrer ikke målet med DevOps, men kvalitet må måles og overvåkes.
+Hvor strengt man opprettholder det bør stå i forhold til risikoen.
